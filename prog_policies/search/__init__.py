@@ -13,6 +13,7 @@ from .random_programmatic import RandomProgrammatic
 from .stochastic_hill_climbing import StochasticHillClimbing
 from .stochastic_hill_climbing_credit_assignment import StochasticHillClimbingWithCreditAssignment
 from .stochastic_hill_climbing_with_simplification import StochasticHillClimbingWithSimplification
+from .gpt_stochastic_hill_climbing import GPTStochasticHillClimbing
 
 def get_search_cls(search_cls_name: str) -> BaseSearch:
     search_cls = globals().get(search_cls_name)

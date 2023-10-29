@@ -14,7 +14,7 @@ if __name__ == '__main__':
     
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     
-    parser.add_argument('--search_args_path', default='sample_args/search/latent_cem.json', help='Arguments path for search method')
+    parser.add_argument('--search_args_path', default='sample_args/search/stochastic_hill_climbing.json', help='Arguments path for search method')
     parser.add_argument('--log_folder', default='logs', help='Folder to save logs')
     parser.add_argument('--search_seed', type=int, help='Seed for search method')
     parser.add_argument('--wandb_entity', type=str, help='Wandb entity')

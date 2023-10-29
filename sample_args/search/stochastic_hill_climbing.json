@@ -1,0 +1,20 @@
+{
+    "search_method_cls_name": "GPTStochasticHillClimbing",
+    "search_method_args": {
+        "task_cls_name": "Seeder",
+        "env_args": {
+            "env_height": 8,
+            "env_width": 8,
+            "crashable": true,
+            "leaps_behaviour": false,
+            "max_calls": 10000
+        },
+        "exp_name": "search_debug",
+        "search_method_args": {},
+        "max_evaluations": 1e4,
+        "number_executions": 16,
+        "search_seed": 5,
+        "checkpoint_frequency": 1000,
+        "n_proc": 1
+    }
+}
