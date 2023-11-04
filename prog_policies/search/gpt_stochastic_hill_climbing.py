@@ -13,7 +13,7 @@ class GPTStochasticHillClimbing(BaseSearch):
         pass
         
     def init_search_vars(self):
-        self.current_program = self.dsl.parse_str_to_node("DEF run m( WHILE c( frontIsClear c) w( pickMarker w) move IFELSE c( leftIsClear c) i( turnLeft i) ELSE e( turnRight e) move REPEAT R=2 r( IF c( frontIsClear c) i( putMarker i) turnRight move r) m)")
+        self.current_program = self.dsl.parse_str_to_node("DEF run m( IFELSE c( frontIsClear c) i( move i) ELSE e( turnRight e) REPEAT R=4 r( IFELSE c( leftIsClear c) i( turnLeft i) ELSE e( putMarker move e) r) turnRight REPEAT R=4 r( move r) IF c( markersPresent c) i( pickMarker i) move m)")
         self.current_reward = evaluate_program(self.current_program, self.dsl, self.task_envs)
         
     def get_search_vars(self) -> dict:
