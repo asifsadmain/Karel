@@ -7,13 +7,14 @@ from prog_policies.base import dsl_nodes
 
 from .base_search import BaseSearch
 from .utils import evaluate_program
+from ..gpt.gpt import get_initial_program, get_next_program
 
 class GPTStochasticHillClimbing(BaseSearch):
     def parse_method_args(self, search_method_args: dict):
         pass
         
     def init_search_vars(self):
-        self.current_program = self.dsl.parse_str_to_node("DEF run m( IFELSE c( frontIsClear c) i( move i) ELSE e( turnRight e) REPEAT R=4 r( IFELSE c( leftIsClear c) i( turnLeft i) ELSE e( putMarker move e) r) turnRight REPEAT R=4 r( move r) IF c( markersPresent c) i( pickMarker i) move m)")
+        self.current_program = self.dsl.parse_str_to_node(get_initial_program())
         self.current_reward = evaluate_program(self.current_program, self.dsl, self.task_envs)
         
     def get_search_vars(self) -> dict:
@@ -115,7 +116,8 @@ class GPTStochasticHillClimbing(BaseSearch):
         if self.best_reward >= 1.0:
             return
         
-        next_program = self.mutate_current_program()
+        # next_program = self.mutate_current_program()
+        next_program = get_next_program(self.current_program, self.current_reward)
         next_reward = evaluate_program(next_program, self.dsl, self.task_envs)
         self.num_evaluations += 1
         

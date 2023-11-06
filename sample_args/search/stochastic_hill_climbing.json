@@ -13,7 +13,7 @@
         "search_method_args": {},
         "max_evaluations": 1e4,
         "number_executions": 16,
-        "search_seed": 5,
+        "search_seed": 4,
         "checkpoint_frequency": 1000,
         "n_proc": 1
     }
