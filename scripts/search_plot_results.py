@@ -37,13 +37,13 @@ def plot_results(experiment):
     os.makedirs(plot_dir, exist_ok=True)
     
     # check folders in exp_all_tasks/search
-    methods = sorted(os.listdir(os.path.join('output', experiment, 'search')))
+    methods = [f for f in sorted(os.listdir(os.path.join('output', experiment, 'search'))) if not f.startswith('.')]
 
     all_tasks = []
     for m in methods:
         all_tasks += os.listdir(os.path.join('output', experiment, 'search', m))
 
-    all_tasks = sorted(list(set(all_tasks) - set(['search_args.json'])))
+    all_tasks = sorted(list(set(all_tasks) - set(['search_args.json']) - set(['.DS_Store'])))
 
     x_axis = np.logspace(0, 7, 1000)
     

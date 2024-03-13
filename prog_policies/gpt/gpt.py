@@ -57,13 +57,13 @@ Here is the details of the environment and instructions about the goal in the "E
 
 EnvironmentDetails:
 ```
-I have a 8x8 grid and a bot at the bottom left which will interact inside the grid. The whole grid is empty, \
-i.e. it does not have any marker inside. There are reward signals that depend on the interactions of the bot \
-inside the grid. Usually, the rewards depend on picking or putting markers in different circumstances. \
-The interaction of the bot will be decided by the programs written by following the above DSL. \
+I have a 8x8 grid and a bot at the bottom left which will interact inside the grid. The index of top-left \
+cell in the grid is [0,0] whereas, it is [7,7] at the bottom right cell. There is no marker present in any of the cells inside the grid. \
+There are reward signals that depend on the interactions of the bot \
+inside the grid. The interaction of the bot will be decided by the programs written by following the above DSL. \
 The reward signals obtained from the program will be provided back once we evaluate the program in the \
 environment, so you will be asked to generate other programs based on the feedback the environment provides. \
-The name of the task is 'FourCorners' and the goal is to find a program that will maximize the reward. 
+The goal is to find a program that will maximize the reward. 
 ```
 
 """
@@ -117,7 +117,7 @@ def get_initial_program():
     return program
 
 
-def generate_next_program(latest_program, latest_reward):
+def generate_next_program(latest_program, latest_reward, latest_gpt_program, latest_gpt_reward, SAR):
     latest_program = f"""
     The latest program obtained from the interactive system in this karel domain is:
     ```
@@ -128,13 +128,33 @@ def generate_next_program(latest_program, latest_reward):
 
     """
 
+    if (latest_gpt_program):
+        latest_gpt_program = f"""
+        The last program obtained from you is:
+        ```
+        {latest_gpt_program}
+        ```
+
+        This program generates a reward of {latest_gpt_reward}.
+
+        """
+        if (latest_gpt_reward > 0):
+            latest_gpt_program += f"""
+            Please follow the following action, state and reward information to grab the idea of which actions \
+            can be helpful to improve the latest program:
+            {SAR}
+
+            """
+
     tasks = f"""
     Your tasks are the following 2:
-    1. Analyze the latest program and try to understand what is going on in the context of 'FourCorners' environment in Karel domain.
+    1. Analyze the latest program and try to understand what is going on in the context of Karel domain.
     2. Inside a <newProgram></newProgram> tag, write another program which can achieve a better reward than this one.
     """
 
     user_message = dsl + dsl_explanation + program_writing_guidelines + environment_details + latest_program + tasks
+    if (latest_gpt_program):
+        user_message = dsl + dsl_explanation + program_writing_guidelines + environment_details + latest_program + latest_gpt_program + tasks
 
     valid_program_found = False
     program = ""
@@ -163,9 +183,9 @@ def generate_next_program(latest_program, latest_reward):
 
     return program
 
-def get_next_program(latest_program, latest_reward):
+def get_next_program(latest_program, latest_reward, latest_gpt_program, latest_gpt_reward, SAR):
     dsl = KarelDSL()
-    program = generate_next_program(latest_program, latest_reward)
+    program = generate_next_program(latest_program, latest_reward, latest_gpt_program, latest_gpt_reward, SAR)
     program = parse_response(program)
     # print("Program from GPT =", program)
 
@@ -177,10 +197,29 @@ def get_next_program(latest_program, latest_reward):
             # print("Program", program, " is not valid")
             print("Invalid program from GPT =", program)
             print("Sending another request...")
-            program = generate_next_program(latest_program, latest_reward)
+            program = generate_next_program(latest_program, latest_reward, latest_gpt_program, latest_gpt_reward, SAR)
             program = parse_response(program)
 
-    print("Program from GPT =", program)
+    # print("Program from GPT =", program)
+    # task_cls = get_task_cls('Seeder')
+    # env_args = {
+    #     "env_height": 8,
+    #     "env_width": 8,
+    #     "crashable": True,
+    #     "leaps_behaviour": False,
+    #     "max_calls": 10000
+    # }
+    # task_envs = [task_cls(env_args, i) for i in range(8)]
+    # print("Reward =", evaluate_program(program, dsl, task_envs))
+
+    return dsl.parse_str_to_node(program)
+
+def get_gpt_best_program(latest_program, latest_reward):
+    gpt_best_program = None
+    gpt_best_reward = -100.0
+    latest_gpt_program = None
+    latest_gpt_reward = None
+
     task_cls = get_task_cls('Seeder')
     env_args = {
         "env_height": 8,
@@ -190,6 +229,42 @@ def get_next_program(latest_program, latest_reward):
         "max_calls": 10000
     }
     task_envs = [task_cls(env_args, i) for i in range(8)]
-    print("Reward =", evaluate_program(program, dsl, task_envs))
 
-    return dsl.parse_str_to_node(program)
+    for i in range(5):
+        SAR = ""
+        print("i =======", i)
+
+        gpt_current_program = get_next_program(latest_program, latest_reward, latest_gpt_program, latest_gpt_reward, SAR)
+        gpt_current_reward = evaluate_program(gpt_current_program, dsl, task_envs)
+
+        for i in range(8):
+            prev_prev_action = None
+            prev_action = None
+
+            for action in gpt_current_program.run_generator(task_envs[0].environment):
+                state = task_envs[0].environment.get_hero_pos()
+                reward = task_envs[0].get_reward(task_envs[0].environment)[1]
+                
+                if (reward > 0):
+                    if (prev_prev_action and prev_action):
+                        SAR += f"Actions: {prev_prev_action.name} {prev_action.name} {action.name}\n"
+                    elif (prev_action):
+                        SAR += f"Actions: {prev_action.name} {action.name}\n"
+                    else:
+                        SAR += f"Actions: {action.name}\n"
+                    SAR += f"Bot Position: {state[0:2]}\n"
+                    SAR += f"Reward: {reward}\n\n"
+                prev_prev_action = prev_action
+                prev_action = action
+
+        # print(SAR)
+        latest_gpt_program = gpt_current_program
+        latest_gpt_reward = gpt_current_reward
+
+        if (gpt_current_reward > gpt_best_reward):
+            gpt_best_program = gpt_current_program
+            gpt_best_reward = gpt_current_reward
+
+    print("Sending program", KarelDSL().parse_node_to_str(gpt_best_program), "with reward", gpt_best_reward)
+    
+    return gpt_best_program

@@ -7,7 +7,7 @@ from prog_policies.base import dsl_nodes
 
 from .base_search import BaseSearch
 from .utils import evaluate_program
-from ..gpt.gpt import get_initial_program, get_next_program
+from ..gpt.gpt import get_initial_program, get_gpt_best_program
 
 class GPTStochasticHillClimbing(BaseSearch):
     def parse_method_args(self, search_method_args: dict):
@@ -16,6 +16,7 @@ class GPTStochasticHillClimbing(BaseSearch):
     def init_search_vars(self):
         self.current_program = self.dsl.parse_str_to_node(get_initial_program())
         self.current_reward = evaluate_program(self.current_program, self.dsl, self.task_envs)
+        self.ask_gpt = True
         
     def get_search_vars(self) -> dict:
         return {
@@ -116,11 +117,24 @@ class GPTStochasticHillClimbing(BaseSearch):
         if self.best_reward >= 1.0:
             return
         
-        # next_program = self.mutate_current_program()
-        next_program = get_next_program(self.current_program, self.current_reward)
-        next_reward = evaluate_program(next_program, self.dsl, self.task_envs)
-        self.num_evaluations += 1
+        if (self.ask_gpt == True):
+            gpt_next_program = get_gpt_best_program(self.current_program, self.current_reward)
+            gpt_next_reward = evaluate_program(gpt_next_program, self.dsl, self.task_envs)
+            self.num_evaluations += 5
+
+            if gpt_next_reward >= self.current_reward:
+                self.current_program = gpt_next_program
+                self.current_reward = gpt_next_reward
+
+            self.current_program = gpt_next_program
+            self.ask_gpt = False
+        else:
+            next_program = self.mutate_current_program()
+            next_reward = evaluate_program(next_program, self.dsl, self.task_envs)
+            self.num_evaluations += 1
         
-        if next_reward >= self.current_reward:
-            self.current_program = next_program
-            self.current_reward = next_reward
+            if next_reward >= self.current_reward:
+                print("============================================")
+                self.current_program = next_program
+                self.current_reward = next_reward
+                self.ask_gpt = True
